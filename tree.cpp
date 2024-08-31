@@ -50,7 +50,6 @@ void putc_dubscaped(std::ostream& out, char c) {
   case '\\': out << "\\\\'"; return;
   case '\'': out << "'"; return;
   case '\"': out << "\\\""; return;
-  case '\?': out << "?"; return;
   }
   if (c >= 0x20 && c <= 0x7E) {
     out.put(c);
