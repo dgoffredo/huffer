@@ -182,7 +182,7 @@ void fill_leaves(NodeHeap& heap, const SymbolCounts& symbols) {
 void print_graph(std::ostream& out, NodeHeap& heap, const std::string& extra) {
   if (!extra.empty()) {
     // TODO: Maybe make it an isolated node.
-    out << "# Input has extra trailing bytes: " << hexed(extra);
+    out << "# Input has extra trailing bytes: " << hexed(extra) << '\n';
   }
   if (heap.empty()) {
     return;

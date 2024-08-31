@@ -1,7 +1,7 @@
 .DELETE_ON_ERROR:
 
 .PHONY: diagrams
-diagrams: mary.svg mississippi.svg foobar.svg tree.svg double-mary.svg double-mississippi.svg
+diagrams: mary.svg mississippi.svg foobar.svg tree.svg double-mary.svg double-mississippi.svg double-odd.svg
 
 tree.svg: ../tree
 	<$< gzip --no-name | ../tree | dot -Tsvg -o $@
