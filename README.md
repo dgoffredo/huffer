@@ -13,3 +13,7 @@ For example,
 > Mary went the lamb was sure to go.
 
 ![Mary had a little Huffman tree](examples/mary.svg)
+
+For more examples, see [examples/][1].
+
+[1]: examples/
