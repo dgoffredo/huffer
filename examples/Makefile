@@ -1,16 +1,26 @@
 .DELETE_ON_ERROR:
 
-.PHONY: diagrams
-diagrams: mary.svg mississippi.svg foobar.svg tree.svg double-mary.svg double-mississippi.svg double-odd.svg
+DIAGRAMS := mary mississippi foobar tree double-mary double-mississippi double-odd license
+DOTS := $(DIAGRAMS:=.dot)
+SVGS := $(DIAGRAMS:=.svg)
 
-tree.svg: ../tree
-	<$< gzip --no-name | ../tree | dot -Tsvg -o $@
+.PHONY: all
+all: $(DOTS) $(SVGS)
 
-double-%.svg: %.txt ../double-tree
-	<$< ../double-tree | dot -Tsvg -o $@
+tree.dot: ../tree
+	<$< gzip --no-name | ../tree >$@
 
-%.svg: %.txt ../tree
-	<$< ../tree | dot -Tsvg -o $@
+license.dot: ../LICENSE.md ../tree
+	<$< ../tree >$@
+
+%.svg: %.dot
+	dot -Tsvg -o $@ $^
+
+%.dot: %.txt ../tree
+	<$< ../tree >$@
+
+double-%.dot: %.txt ../double-tree
+	<$< ../double-tree >$@
 
 ../tree: ../tree.cpp
 	$(CXX) -Og -o $@ $^

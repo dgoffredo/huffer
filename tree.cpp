@@ -103,7 +103,7 @@ struct Node {
 
   void print_name(std::ostream& out) const {
     if (which == Type::leaf) {
-      out << "leaf_" << hexed(leaf);
+      out << "leaf_0x" << hexed(leaf);
     } else {
       out << "internal_" << std::dec << static_cast<std::uint64_t>(internal);
     }
@@ -182,7 +182,8 @@ void fill_leaves(NodeHeap& heap, const SymbolCounts& symbols) {
 void print_graph(std::ostream& out, NodeHeap& heap, const std::string& extra) {
   if (!extra.empty()) {
     // TODO: Maybe make it an isolated node.
-    out << "# Input has extra trailing bytes: " << hexed(extra) << '\n';
+    out << "# Input has " << extra.size() << " extra trailing bytes: 0x"
+        << hexed(extra) << '\n';
   }
   if (heap.empty()) {
     return;
