@@ -1,12 +1,12 @@
 digraph {
-  leaf_0x61 [label="\"a\" (1)"];
-  leaf_0x66 [label="\"f\" (1)"];
-  internal_0 -> leaf_0x61 [label="0"];
-  internal_0 -> leaf_0x66 [label="1"];
   leaf_0x72 [label="\"r\" (1)"];
   leaf_0x62 [label="\"b\" (1)"];
-  internal_1 -> leaf_0x72 [label="0"];
-  internal_1 -> leaf_0x62 [label="1"];
+  internal_0 -> leaf_0x72 [label="0"];
+  internal_0 -> leaf_0x62 [label="1"];
+  leaf_0x66 [label="\"f\" (1)"];
+  leaf_0x61 [label="\"a\" (1)"];
+  internal_1 -> leaf_0x66 [label="0"];
+  internal_1 -> leaf_0x61 [label="1"];
   internal_0 [label="(2)"];
   leaf_0x6f [label="\"o\" (2)"];
   internal_2 -> internal_0 [label="0"];

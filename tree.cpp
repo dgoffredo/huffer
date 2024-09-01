@@ -3,11 +3,12 @@
 #include <iomanip>
 #include <iostream>
 #include <istream>
-#include <map>
+#include <locale>
 #include <ostream>
 #include <queue>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 #ifdef SYMBOL_SIZE
@@ -30,11 +31,28 @@ using InternalNodeID =
   std::conditional_t<symbol_size <= 4, std::uint32_t,
   std::uint64_t>>>;
 
-// `SymbolCounts` maps each `Symbol` to how often it appears in the input.
+struct HashSymbol {
+  std::size_t operator()(Symbol symbol) const {
+    return hash_bytes(symbol.data(), symbol.size());
+  }
+
+  static long hash_bytes(const char* begin, std::size_t size) {
+    return std::use_facet<std::collate<char>>(std::locale::classic()).hash(begin, begin + size);
+  }
+};
+
+struct SymbolInfo {
+  // I could make this a `union` to save memory, but it'd be a pain.
+  std::uint64_t count;
+  std::vector<bool> code_word;
+};
+
+// `Symbols` is used initially to count the frequency of each symbol in the input.
+// Subsequently, it's used to store the code word calculated for each symbol.
 // In case `symbol_size` does not divide the input size, `extra` might contain
 // the trailing remainder of the input.
-struct SymbolCounts {
-  std::map<Symbol, std::uint64_t> counts;
+struct Symbols {
+  std::unordered_map<Symbol, SymbolInfo, HashSymbol> at;
   std::string extra;
 };
 
@@ -142,13 +160,13 @@ struct Node {
   }
 };
 
-std::istream& operator>>(std::istream& in, SymbolCounts& symbols) {
+std::istream& operator>>(std::istream& in, Symbols& symbols) {
   Symbol buffer;
   for (;;) {
     in.read(buffer.data(), buffer.size());
     switch (const int count = in.gcount()) {
     case symbol_size:
-      ++symbols.counts[buffer];
+      ++symbols.at[buffer].count;
       continue;
     default:
       symbols.extra.assign(buffer.data(), count);
@@ -169,56 +187,63 @@ struct ByWeightReversed {
 
 using NodeHeap = std::priority_queue<Node, std::vector<Node>, ByWeightReversed>;
 
-void fill_leaves(NodeHeap& heap, const SymbolCounts& symbols) {
-  for (const auto& [symbol, count] : symbols.counts) {
+void fill_leaves(NodeHeap& heap, const Symbols& symbols) {
+  for (const auto& [symbol, info] : symbols.at) {
     heap.push(Node{
-      .weight = count,
+      .weight = info.count,
       .which = Node::Type::leaf,
       .leaf = symbol
     });
   }
 }
 
-void print_graph(std::ostream& out, NodeHeap& heap, const std::string& extra) {
+void build_tree(NodeHeap& heap, const std::string& extra, std::ostream *graphviz_out) {
+  #define PRINT if (graphviz_out) (*graphviz_out)
+
   if (!extra.empty()) {
     // TODO: Maybe make it an isolated node.
-    out << "# Input has " << extra.size() << " extra trailing bytes: 0x"
+    PRINT << "# Input has " << extra.size() << " extra trailing bytes: 0x"
         << hexed(extra) << '\n';
   }
   if (heap.empty()) {
     return;
   }
-  out << "digraph {\n";
+  PRINT << "digraph {\n";
   InternalNodeID next_internal_node = 0;
   for (;;) {
     Node left = heap.top();
-    out << "  " << left.name() << " [label=" << left.label_quoted() << "];\n";
+    PRINT << "  " << left.name() << " [label=" << left.label_quoted() << "];\n";
     heap.pop();
     if (heap.empty()) {
       break;
     }
     Node right = heap.top();
-    out << "  " << right.name() << " [label=" << right.label_quoted() << "];\n";
+    PRINT << "  " << right.name() << " [label=" << right.label_quoted() << "];\n";
     Node parent = {
       .weight = left.weight + right.weight,
       .which = Node::Type::internal,
       .internal = next_internal_node++
     };
-    out << "  " << parent.name() << " -> " << left.name() << " [label=\"0\"];\n";
-    out << "  " << parent.name() << " -> " << right.name() << " [label=\"1\"];\n";
+    PRINT << "  " << parent.name() << " -> " << left.name() << " [label=\"0\"];\n";
+    PRINT << "  " << parent.name() << " -> " << right.name() << " [label=\"1\"];\n";
     heap.pop();
     heap.push(std::move(parent));
   }
-  out << "}\n";
+  PRINT << "}\n";
+
+  #undef PRINT
 }
 
+// TODO: Do the thing. Need to store the graph instead of printing and
+// discarding as we go.
+
 int main() {
-  SymbolCounts symbols;
+  Symbols symbols;
   std::cin >> symbols;
   if (std::cin.bad()) {
     return 1;
   }
   NodeHeap heap;
   fill_leaves(heap, symbols);
-  print_graph(std::cout, heap, symbols.extra);
+  build_tree(heap, symbols.extra, &std::cout);
 }
