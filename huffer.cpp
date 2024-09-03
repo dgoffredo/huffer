@@ -687,12 +687,8 @@ int main(int /*argc*/, char *argv[]) {
     return 0;
   }
 
-  if (command == "encode" || command == "compress" || command == "graph") {
+  if (*arg && (command == "encode" || command == "compress" || command == "graph")) {
     // Possibly read `--symbol-size=N`.
-    if (!*arg) {
-      usage(std::cerr) << command << " requires a FILE argument.\n";
-      return -2;
-    }
     std::string_view chunk = *arg;
     const std::string_view prefix = "--symbol-size=";
     if (chunk.starts_with(prefix)) {
