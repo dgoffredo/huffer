@@ -508,105 +508,6 @@ int main_graph(const char *input_path, std::ostream& out) {
   return 0;
 }
 
-int main_write_tree(const char *input_path, std::ostream& out) {
-  if (!input_path) {
-    input_path = "/dev/stdin";
-  }
-  std::ifstream in{input_path};
-  if (!in) {
-    return 42;
-  }
-  Symbols symbols = read_symbols(in);
-  Tree tree = build_tree(symbols);
-  OutputBitStream bits{*out.rdbuf()};
-  write_tree(bits, tree.get());
-  return 0;
-}
-
-int main_read_and_graph_tree(std::istream& in, std::ostream& out) {
-  InputBitStream bitsin{*in.rdbuf()};
-  Tree tree = read_tree(bitsin);
-  if (!tree) {
-    return 1;
-  }
-  graph_tree(out, *tree, "");
-  return 0;
-}
-
-struct TextPrinter {
-  const std::vector<bool>& code_word;
-  friend std::ostream& operator<<(std::ostream& out, TextPrinter printer) {
-    out << "0b";
-    const std::vector<bool>& bits = printer.code_word;
-    for (int i = bits.size() - 1; i >= 0; --i) {
-      out << (bits[i] ? '1' : '0');
-    }
-    return out;
-  }
-};
-
-TextPrinter text(const std::vector<bool>& code_word) {
-  return TextPrinter{code_word};
-}
-
-int main_write_code_words(const char *input_path, std::ostream& out) {
-  if (!input_path) {
-    input_path = "/dev/stdin";
-  }
-  std::ifstream in{input_path};
-  if (!in) {
-    return 42;
-  }
-  Symbols symbols = read_symbols(in);
-  Tree tree = build_tree(symbols);
-  build_code_words(symbols, tree.get());
-  for (const auto& [symbol, info] : symbols.info) {
-    out << '\"' << dubscaped(symbol) << "\" -> " << text(info.code_word) << '\n';
-  }
-  return 0;
-}
-
-int main_write_header(const char *input_path, std::ostream& out) {
-  if (!input_path) {
-    input_path = "/dev/stdin";
-  }
-  std::ifstream in{input_path};
-  if (!in) {
-    return 42;
-  }
-  Symbols symbols = read_symbols(in);
-  out << "huffer1" << '\0';
-  OutputBitStream bitout{*out.rdbuf()};
-  bitout << std::bitset<64>{symbols.total_size} << std::bitset<3>{symbol_size - 1};
-  return 0;
-}
-
-int main_read_header(std::istream& in, std::ostream& out) {
-  char magic[8] = {};
-  in.read(magic, sizeof magic);
-  if (!in) {
-    return 1;
-  }
-  const char expected[] = {'h', 'u', 'f', 'f', 'e', 'r', '1', '\0'};
-  if (!std::equal(magic, magic + sizeof magic, expected)) {
-    return 2;
-  }
-  InputBitStream bitin{*in.rdbuf()};
-  std::bitset<64> total_size;
-  bitin >> total_size;
-  if (!bitin) {
-    return 3;
-  }
-  std::bitset<3> symbol_size;
-  bitin >> symbol_size;
-  if (!bitin) {
-    return 4;
-  }
-  out << "total_size: " << total_size.to_ullong()
-      << "\nsymbol_size: " << (symbol_size.to_ulong() + 1) << '\n';
-  return 0;
-}
-
 int main_encode(const char *input_path, std::ostream& out) {
   if (!input_path) {
     input_path = "/dev/stdin";
@@ -733,29 +634,14 @@ int main(int argc, char *argv[]) {
   }
 
   const std::string command = argv[1];
-  if (command == "graph") {
-    return main_graph(argv[2], std::cout);
-  }
-  if (command == "write-tree") {
-    return main_write_tree(argv[2], std::cout);
-  }
-  if (command == "read-and-graph-tree") {
-    return main_read_and_graph_tree(std::cin, std::cout);
-  }
-  if (command == "write-code-words") {
-    return main_write_code_words(argv[2], std::cout);
-  }
-  if (command == "write-header") {
-    return main_write_header(argv[2], std::cout);
-  }
-  if (command == "read-header") {
-    return main_read_header(std::cin, std::cout);
-  }
   if (command == "encode" || command == "compress") {
     return main_encode(argv[2], std::cout);
   }
   if (command == "decode" || command == "decompress") {
     return main_decode(argv[2], std::cout);
+  }
+  if (command == "graph") {
+    return main_graph(argv[2], std::cout);
   }
   std::cerr << "TODO: usage\n";
   return -2;
