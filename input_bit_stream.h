@@ -53,6 +53,7 @@ public:
 InputBitStream& operator>>(InputBitStream&, bool&);
 template <std::size_t n>
 InputBitStream& operator>>(InputBitStream&, std::bitset<n>&);
+InputBitStream& operator>>(InputBitStream&, char&);
 
 inline
 InputBitStream::InputBitStream(std::streambuf& source)
@@ -104,6 +105,15 @@ InputBitStream& operator>>(InputBitStream& stream, std::bitset<n>& bits) {
       break;
     }
     bits[i] = bit;
+  }
+  return stream;
+}
+
+inline
+InputBitStream& operator>>(InputBitStream& stream, char& byte) {
+  std::bitset<8> bits;
+  if (stream >> bits) {
+    byte = char(bits.to_ulong());
   }
   return stream;
 }
