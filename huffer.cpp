@@ -674,7 +674,7 @@ std::ostream& usage(std::ostream& out) {
 
 int main(int /*argc*/, char *argv[]) {
   const char *const *arg = argv + 1;
-  if (!arg) {
+  if (!*arg) {
     usage(std::cerr) << "Not enough arguments.\n";
     return -1;
   }
