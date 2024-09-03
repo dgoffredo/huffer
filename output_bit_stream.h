@@ -5,13 +5,18 @@
 #include <vector>
 
 class OutputBitStream {
-  // TODO
+  // `streambuf` is the "sink" to which bits will be written one byte at a
+  // time.
   std::streambuf& streambuf;
-  // TODO
+  // `current` is the "buffer" of the byte that, once filled with bits, will be
+  // written to `streambuf`.
   std::byte current;
-  // TODO
+  // `mask` is a bit mask that indicates the next bit in `current` to be
+  // overwritten by `put`. If `mask` is zero, then it is time to write
+  // `current` to `streambuf` (`flush_byte`).
   std::byte mask;
-  // TODO
+  // Output doesn't have a concept of "end of file," so the only failure
+  // condition is the error or "bad" condition.
   bool bad_bit : 1;
 
 public:
@@ -20,13 +25,11 @@ public:
   // Send any remaining bits to the sink, but don't flush the sink.
   ~OutputBitStream();
 
-  // TODO
   bool bad() const { return bad_bit; }
   bool fail() const { return bad_bit; }
 
   explicit operator bool() const { return !fail(); }
 
-  // TODO
   void bad(bool bit) { bad_bit = bit; }
 
   // Buffer the specified `bit` for writing to the output. Return a reference
