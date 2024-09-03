@@ -672,14 +672,14 @@ std::ostream& usage(std::ostream& out) {
     "\n";
 }
 
-int main(int /*argc*/, char *argv[]) {
+int parse_command_line(const char * const *argv, std::string& command, const char *& file) {
   const char *const *arg = argv + 1;
   if (!*arg) {
     usage(std::cerr) << "Not enough arguments.\n";
     return -1;
   }
 
-  const std::string_view command  = *arg;
+  command  = *arg;
   ++arg;
 
   if (command == "-h" || command == "--help") {
@@ -702,10 +702,20 @@ int main(int /*argc*/, char *argv[]) {
     }
   }
 
-  const char *file = *arg;
+  file = *arg;
   if (!file && (command == "encode" || command == "compress")) {
     usage(std::cerr) << command << " requires a FILE argument.\n";
     return -4;
+  }
+
+  return 0;
+}
+
+int main(int /*argc*/, char *argv[]) {
+  std::string command;
+  const char *file;
+  if (int rc = parse_command_line(argv, command, file)) {
+    return rc;
   }
 
   if (command == "encode" || command == "compress") {
