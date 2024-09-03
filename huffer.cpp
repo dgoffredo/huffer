@@ -4,9 +4,9 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -15,6 +15,8 @@
 #include <memory>
 #include <queue>
 #include <string>
+#include <string_view>
+#include <system_error>
 #include <unordered_map>
 #include <vector>
 
@@ -413,7 +415,11 @@ Tree read_tree(InputBitStream& in) {
   if (!in) {
     return nullptr;
   }
+#pragma GCC diagnostic push
+  // You're wrong, GCC. You're WRONG.
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
   if (is_leaf) {
+#pragma GCC diagnostic pop
     // The root is a leaf.
     Symbol symbol;
     in >> symbol;
@@ -456,7 +462,11 @@ Tree read_tree(InputBitStream& in) {
     }
 
     Node *node;
+#pragma GCC diagnostic push
+    // You're wrong, GCC. You're WRONG.
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
     if (is_leaf) {
+#pragma GCC diagnostic pop
       Symbol symbol;
       in >> symbol;
       if (!in) {
@@ -492,13 +502,19 @@ Tree read_tree(InputBitStream& in) {
 }
 
 int main_graph(const char *input_path, std::ostream& out) {
-  if (!input_path) {
-    input_path = "/dev/stdin";
+  std::ifstream fin;
+  std::streambuf *buf;
+  if (input_path) {
+    fin.open(input_path);
+    if (!fin) {
+      return 1;
+    }
+    buf = fin.rdbuf();
+  } else {
+    buf = std::cin.rdbuf();
   }
-  std::ifstream in{input_path};
-  if (!in) {
-    return 42;
-  }
+  std::istream in{buf};
+
   Symbols symbols = read_symbols(in);
   Tree tree = build_tree(symbols);
   if (tree == nullptr) {
@@ -509,13 +525,11 @@ int main_graph(const char *input_path, std::ostream& out) {
 }
 
 int main_encode(const char *input_path, std::ostream& out) {
-  if (!input_path) {
-    input_path = "/dev/stdin";
-  }
   std::ifstream in{input_path};
   if (!in) {
-    return 42;
+    return 1;
   }
+
   Symbols symbols = read_symbols(in);
   Tree tree = build_tree(symbols);
   build_code_words(symbols, tree.get());
@@ -548,39 +562,44 @@ int main_encode(const char *input_path, std::ostream& out) {
 }
 
 int main_decode(const char *input_path, std::ostream& out) {
-  if (!input_path) {
-    input_path = "/dev/stdin";
+  std::ifstream fin;
+  std::streambuf *buf;
+  if (input_path) {
+    fin.open(input_path);
+    if (!fin) {
+      return 1;
+    }
+    buf = fin.rdbuf();
+  } else {
+    buf = std::cin.rdbuf();
   }
-  std::ifstream in{input_path};
-  if (!in) {
-    return 42;
-  }
+  std::istream in{buf};
 
   // Read the header.
   char magic[8] = {};
   in.read(magic, sizeof magic);
   if (!in) {
-    return 1;
+    return 2;
   }
   const char expected[] = {'h', 'u', 'f', 'f', 'e', 'r', '1', '\0'};
   if (!std::equal(magic, magic + sizeof magic, expected)) {
-    return 2;
+    return 3;
   }
   InputBitStream bitin{*in.rdbuf()};
   std::bitset<64> raw_total_size;
   bitin >> raw_total_size;
   if (!bitin) {
-    return 3;
+    return 4;
   }
   std::bitset<3> raw_symbol_size;
   bitin >> raw_symbol_size;
   if (!bitin) {
-    return 4;
+    return 5;
   }
   const std::uint64_t total_size = raw_total_size.to_ullong();
   symbol_size = raw_symbol_size.to_ulong() + 1;
   if (symbol_size > 8) {
-    return 5;
+    return 6;
   }
 
   if (total_size == 0) {
@@ -598,7 +617,7 @@ int main_decode(const char *input_path, std::ostream& out) {
       bool bit;
       bitin >> bit;
       if (!bitin) {
-        return 6;
+        return 7;
       }
       if (node->type == Node::Type::leaf) {
         // The root is a leaf, so just copy it over.
@@ -623,26 +642,86 @@ int main_decode(const char *input_path, std::ostream& out) {
   return 0;
 }
 
-int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    std::cerr << "TODO: usage\n";
+std::ostream& usage(std::ostream& out) {
+  return out <<
+    "huffer - Huffman coding based data compression\n"
+    "\n"
+    "usage:\n"
+    "\n"
+    "  huffer --help\n"
+    "  huffer -h\n"
+    "    Print this message to standard output.\n"
+    "\n"
+    "  huffer encode [--symbol-size=N] FILE\n"
+    "  huffer compress [--symbol-size=N] FILE\n"
+    "    Compress the specified FILE using a symbol size of N,\n"
+    "    or 1 by default. Print the compressed data to standard\n"
+    "    output.\n"
+    "\n"
+    "  huffer decode [FILE]\n"
+    "  huffer decompress [FILE]\n"
+    "    Decompress the optionally specified FILE. Print the\n"
+    "    decompressed data to standard output. If FILE is not\n"
+    "    specified, then read from standard input.\n"
+    "\n"
+    "  huffer graph [--symbol-size=N] [FILE]\n"
+    "    Create a Huffman tree of the specified FILE using\n"
+    "    a symbol size of N, or 1 by default. Print the graph to\n"
+    "    standard output in dot (Graphviz) format. If FILE is not\n"
+    "    specified, then read from standard input.\n"
+    "\n";
+}
+
+int main(int /*argc*/, char *argv[]) {
+  const char *const *arg = argv + 1;
+  if (!arg) {
+    usage(std::cerr) << "Not enough arguments.\n";
     return -1;
   }
 
-  if (const char *size_raw = std::getenv("SYMBOL_SIZE")) {
-    symbol_size = std::atoi(size_raw);
+  const std::string_view command  = *arg;
+  ++arg;
+
+  if (command == "-h" || command == "--help") {
+    usage(std::cout);
+    return 0;
   }
 
-  const std::string command = argv[1];
+  if (command == "encode" || command == "compress" || command == "graph") {
+    // Possibly read `--symbol-size=N`.
+    if (!*arg) {
+      usage(std::cerr) << command << " requires a FILE argument.\n";
+      return -2;
+    }
+    std::string_view chunk = *arg;
+    const std::string_view prefix = "--symbol-size=";
+    if (chunk.starts_with(prefix)) {
+      chunk.remove_prefix(prefix.size());
+      const auto result = std::from_chars(chunk.data(), chunk.data() + chunk.size(), symbol_size);
+      if (result.ec != std::errc{} || result.ptr != chunk.data() + chunk.size()) {
+        usage(std::cerr) << "Invalid symbol size: " << chunk << '\n';
+        return -3;
+      }
+      ++arg;
+    }
+  }
+
+  const char *file = *arg;
+  if (!file && (command == "encode" || command == "compress")) {
+    usage(std::cerr) << command << " requires a FILE argument.\n";
+    return -4;
+  }
+
   if (command == "encode" || command == "compress") {
-    return main_encode(argv[2], std::cout);
+    return main_encode(file, std::cout);
   }
   if (command == "decode" || command == "decompress") {
-    return main_decode(argv[2], std::cout);
+    return main_decode(file, std::cout);
   }
   if (command == "graph") {
-    return main_graph(argv[2], std::cout);
+    return main_graph(file, std::cout);
   }
-  std::cerr << "TODO: usage\n";
-  return -2;
+
+  usage(std::cerr) << "Unknown command: " << command << '\n';
+  return -5;
 }
