@@ -1,3 +1,4 @@
+#include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <streambuf>
@@ -50,6 +51,8 @@ public:
 };
 
 InputBitStream& operator>>(InputBitStream&, bool&);
+template <std::size_t n>
+InputBitStream& operator>>(InputBitStream&, std::bitset<n>&);
 
 inline
 InputBitStream::InputBitStream(std::streambuf& source)
@@ -63,20 +66,23 @@ InputBitStream::InputBitStream(std::streambuf& source)
 
 inline
 InputBitStream& InputBitStream::get(bool& bit) {
+  // If we're out of bits in `current`, read another byte.
   if (mask == std::byte{0}) {
+    int ch;
     try {
-      const int ch = streambuf.sbumpc();
-      if (ch == std::streambuf::traits_type::eof()) {
-        eof(true);
-        fail(true);
-        return *this;
-      }
-      current = std::byte{std::uint8_t(ch & 0xff)};
-      mask = std::byte{1};
+      ch = streambuf.sbumpc();
     } catch (...) {
       bad(true);
+      fail(true);
       return *this;
     }
+    if (ch == std::streambuf::traits_type::eof()) {
+      eof(true);
+      fail(true);
+      return *this;
+    }
+    current = std::byte{std::uint8_t(ch & 0xff)};
+    mask = std::byte{1};
   }
 
   bit = (current & mask) != std::byte{0};
@@ -87,4 +93,17 @@ InputBitStream& InputBitStream::get(bool& bit) {
 inline
 InputBitStream& operator>>(InputBitStream& stream, bool& bit) {
   return stream.get(bit);
+}
+
+template <std::size_t n>
+InputBitStream& operator>>(InputBitStream& stream, std::bitset<n>& bits) {
+  for (int i = 0; i < int(bits.size()); ++i) {
+    bool bit;
+    stream >> bit;
+    if (!stream) {
+      break;
+    }
+    bits[i] = bit;
+  }
+  return stream;
 }

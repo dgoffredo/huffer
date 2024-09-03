@@ -13,7 +13,7 @@ class OutputBitStream {
   std::byte current;
   // `mask` is a bit mask that indicates the next bit in `current` to be
   // overwritten by `put`. If `mask` is zero, then it is time to write
-  // `current` to `streambuf` (`flush_byte`).
+  // `current` to `streambuf (see `flush_byte`).
   std::byte mask;
   // Output doesn't have a concept of "end of file," so the only failure
   // condition is the error or "bad" condition.
