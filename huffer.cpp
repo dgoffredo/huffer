@@ -672,7 +672,13 @@ std::ostream& usage(std::ostream& out) {
     "\n";
 }
 
-int parse_command_line(const char * const *argv, std::string& command, const char *& file) {
+int parse_command_line(
+    const char * const *argv,
+    bool& help,
+    std::string& command,
+    const char *& file) {
+  help = false;
+
   const char *const *arg = argv + 1;
   if (!*arg) {
     usage(std::cerr) << "Not enough arguments.\n";
@@ -683,6 +689,7 @@ int parse_command_line(const char * const *argv, std::string& command, const cha
   ++arg;
 
   if (command == "-h" || command == "--help") {
+    help = true;
     usage(std::cout);
     return 0;
   }
@@ -712,10 +719,14 @@ int parse_command_line(const char * const *argv, std::string& command, const cha
 }
 
 int main(int /*argc*/, char *argv[]) {
+  bool help;
   std::string command;
   const char *file;
-  if (int rc = parse_command_line(argv, command, file)) {
+  if (int rc = parse_command_line(argv, help, command, file)) {
     return rc;
+  }
+  if (help) {
+    return 0;
   }
 
   if (command == "encode" || command == "compress") {
