@@ -154,8 +154,7 @@ Symbols read_symbols(std::istream& in) {
   return symbols;
 }
 
-// We want our heap (`priority_queue`) to be a min-heap on
-// `WeightedNode::weight`.
+// We want our heap (`priority_queue`) to be a min-heap on `Node::weight`.
 // Since `priority_queue` is a max-heap, this comparator is reversed.
 struct ByWeightReversed {
   bool operator()(const Node *left, const Node *right) const {
