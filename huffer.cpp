@@ -439,7 +439,7 @@ Tree read_tree(InputBitStream& in) {
     .weight = 0,
     .type = Node::Type::internal,
     .internal = {
-      .id = next_node_id++, // unused
+      .id = next_node_id++,
       .left = nullptr, // TBD
       .right = nullptr // TBD
     }
