@@ -1,2 +1,4 @@
-# built binary
+# build artifacts
 /huffer
+/huffer.d
+/huffer.o
